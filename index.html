@@ -11,14 +11,12 @@
     />
 
     <style>
-        /* Reset body */
         body {
             margin: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f4f6f8;
         }
 
-        /* Header */
         h2 {
             text-align: center;
             margin: 20px 0;
@@ -26,13 +24,11 @@
             font-weight: 600;
         }
 
-        /* Map */
         #map {
-            height: calc(100vh - 100px); /* leave space for header & search */
+            height: calc(100vh - 100px);
             width: 100%;
         }
 
-        /* Search container */
         #search-container {
             position: absolute;
             top: 80px;
@@ -42,7 +38,6 @@
             width: 350px;
         }
 
-        /* Search input */
         #search {
             width: 100%;
             padding: 12px 15px;
@@ -59,7 +54,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
-        /* Autocomplete dropdown */
         #results {
             background: #fff;
             border: 1px solid #ccc;
@@ -81,7 +75,6 @@
             color: white;
         }
 
-        /* Scrollbar for results */
         #results::-webkit-scrollbar {
             width: 6px;
         }
@@ -95,7 +88,6 @@
 
 <h2>World Map 🌍</h2>
 
-<!-- Search Box -->
 <div id="search-container">
     <input
         id="search"
@@ -106,16 +98,14 @@
     <div id="results"></div>
 </div>
 
-<!-- Map -->
 <div id="map"></div>
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // Initialize map
+    // Initialize Leaflet map
     var map = L.map('map').setView([20, 0], 2);
-
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
@@ -125,6 +115,33 @@
     const searchInput = document.getElementById("search");
     const resultsDiv = document.getElementById("results");
 
+    // -------------------------------
+    // CONFIG: your backend URL here
+    const BACKEND_URL = "https://your-backend.fly.dev"; // <--- replace with actual backend URL
+    const USE_STATIC_FALLBACK = false; // set true to use static JSON for local testing
+    const STATIC_JSON = [
+        { "name": "Reservoir A", "lat": 30.0, "lon": 31.2, "built": 1960, "end": null },
+        { "name": "Reservoir B", "lat": 45.0, "lon": -120.0, "built": 1985, "end": null },
+        { "name": "Reservoir C", "lat": -15.0, "lon": 28.0, "built": 2001, "end": null }
+    ];
+    // -------------------------------
+
+    async function fetchReservoirs(query) {
+        if (USE_STATIC_FALLBACK) {
+            return STATIC_JSON.filter(r => r.name.toLowerCase().includes(query.toLowerCase()));
+        }
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/api/reservoirs/?q=${encodeURIComponent(query)}`);
+            if (!response.ok) throw new Error("Network response was not ok");
+            const data = await response.json();
+            return data;
+        } catch (err) {
+            console.error("Fetch error:", err);
+            return [];
+        }
+    }
+
     // Autocomplete search
     searchInput.addEventListener("input", async function () {
         const query = this.value.trim();
@@ -132,34 +149,29 @@
 
         if (query.length < 2) return;
 
-        try {
-            const response = await fetch(`/api/reservoirs/?q=${encodeURIComponent(query)}`);
-            const data = await response.json();
+        const data = await fetchReservoirs(query);
 
-            data.forEach(item => {
-                const div = document.createElement("div");
-                div.className = "result-item";
-                div.textContent = item.name;
+        data.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "result-item";
+            div.textContent = item.name;
 
-                div.addEventListener("click", () => {
-                    if (marker) map.removeLayer(marker);
+            div.addEventListener("click", () => {
+                if (marker) map.removeLayer(marker);
 
-                    map.setView([item.lat, item.lon], 11);
+                map.setView([item.lat, item.lon], 11);
 
-                    marker = L.marker([item.lat, item.lon])
-                        .addTo(map)
-                        .bindPopup(item.name)
-                        .openPopup();
+                marker = L.marker([item.lat, item.lon])
+                    .addTo(map)
+                    .bindPopup(item.name)
+                    .openPopup();
 
-                    resultsDiv.innerHTML = "";
-                    searchInput.value = item.name;
-                });
-
-                resultsDiv.appendChild(div);
+                resultsDiv.innerHTML = "";
+                searchInput.value = item.name;
             });
-        } catch (err) {
-            console.error("Search error:", err);
-        }
+
+            resultsDiv.appendChild(div);
+        });
     });
 
     // Hide results when clicking outside
