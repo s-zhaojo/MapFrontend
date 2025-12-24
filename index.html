@@ -104,27 +104,27 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-    // Initialize Leaflet map
+    // Initialize map
     var map = L.map('map').setView([20, 0], 2);
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
     let marker = null;
-
     const searchInput = document.getElementById("search");
     const resultsDiv = document.getElementById("results");
 
-    // -------------------------------
-    // CONFIG: your backend URL here
-    const BACKEND_URL = "https://your-backend.fly.dev"; // <--- replace with actual backend URL
-    const USE_STATIC_FALLBACK = false; // set true to use static JSON for local testing
+    // Your Render backend URL
+    const BACKEND_URL = "https://mapbackend-jncs.onrender.com";
+
+    // Fallback static JSON for local testing
+    const USE_STATIC_FALLBACK = false;
     const STATIC_JSON = [
         { "name": "Reservoir A", "lat": 30.0, "lon": 31.2, "built": 1960, "end": null },
         { "name": "Reservoir B", "lat": 45.0, "lon": -120.0, "built": 1985, "end": null },
         { "name": "Reservoir C", "lat": -15.0, "lon": 28.0, "built": 2001, "end": null }
     ];
-    // -------------------------------
 
     async function fetchReservoirs(query) {
         if (USE_STATIC_FALLBACK) {
